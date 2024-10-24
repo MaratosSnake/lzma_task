@@ -1,25 +1,32 @@
-if __name__ == "__main__":
-    # Пример использования
-    original_text = "q \nbbbbq\nqertx\nqcvcv\n nb\nm"
+import subprocess
+import sys
+from lzma import compress_file, decompress_file
+try:
+    import click
+except ImportError:
+    subprocess.call([sys.executable, "-m", "pip", "install", "click"])
 
-    # Сохраним оригинальный текст для сжатия
-    with open('example.txt', 'w', encoding='utf-8') as f:
-        f.write(original_text)
 
-    # Архивация текстового файла
-    compress_file('example.txt', 'compressed.lz77')
+@click.command()
+@click.argument('filename', type=click.Path(exists=True))
+@click.option('-d', '--decode', is_flag=True, help='Декодировать файл')
+@click.option('-e', '--encode', is_flag=True, help='Закодировать файл')
+def cli(filename, decode, encode):
+    """Программа для кодирования и декодирования файлов."""
+    if decode and encode:
+        click.echo("Ошибка: Нельзя одновременно кодировать и декодировать файл.")
+        return
 
-    # Распаковка
-    decompress_file('compressed.lz77', 'decompressed.txt')
+    if not decode and not encode:
+        click.echo("Ошибка: Необходимо указать режим работы (-d для декодирования или -e для кодирования).")
+        return
 
-    # Проверка результата
-    with open('decompressed.txt', 'r', encoding='utf-8') as f:
-        decompressed_text = f.read()
+    if encode:
+        compress_file(filename)
+        click.echo(f'Файл {filename} успешно декодирован и сохранен как {filename.split(".")[0]}.lz77')
+    else:
+        decompress_file(filename)
+        click.echo(f'Файл {filename} успешно закодирован и сохранен как {filename.split(".")[0]}_decoded.{filename.split(".")[1]}')
 
-    print(original_text)  # Должно напечатать оригинальный текст
-    wrong_symbols = check_result(original_text, decompressed_text)
-    wrongs = ''.join(' ' if i not in wrong_symbols else '^' for i in range(len(original_text)))
-    print(wrongs)
-    print(decompressed_text)
-    precision = 1 - len(wrong_symbols) / len(original_text)
-    print(len(wrong_symbols), precision)
+if __name__ == '__main__':
+    cli()

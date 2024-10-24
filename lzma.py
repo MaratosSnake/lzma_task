@@ -1,5 +1,8 @@
+from encoding_detector import is_binary_file
+from file import File
 
-def encode(data, window_size=1024):
+
+def __encode(data: str, window_size=1024) -> list[tuple[int, int, str]]:
     encoded = []
     n = len(data)
     i = 0
@@ -36,7 +39,7 @@ def encode(data, window_size=1024):
     return encoded
 
 
-def decode(encoded):
+def __decode(encoded: list[tuple[int, int, str]]):
     decoded = []
     for offset, length, next_char in encoded:
         start = len(decoded)
@@ -53,7 +56,7 @@ def decode(encoded):
     return ''.join(decoded)
 
 
-def save_to_file(encoded, filename, bytes_mode=False, mode='w', encoding='utf-8'):
+def __save_to_file(encoded: list[tuple[int, int, str]], filename: str, bytes_mode=False, mode='w', encoding='utf-8'):
     if bytes_mode:
         mode = 'wb'
         encoding = None
@@ -62,7 +65,7 @@ def save_to_file(encoded, filename, bytes_mode=False, mode='w', encoding='utf-8'
             f.write(f"{offset} {length} {next_char}\n")
 
 
-def load_from_file(filename, bytes_mode=False, mode='r', encoding='utf-8'):
+def __load_from_file(filename: str, bytes_mode=False, mode='r', encoding='utf-8'):
     encoded = []
     if bytes_mode:
         mode = 'rb'
@@ -79,20 +82,27 @@ def load_from_file(filename, bytes_mode=False, mode='r', encoding='utf-8'):
     return encoded
 
 
-def compress_file(input_filename, output_filename=None):
-    with open(input_filename, 'r', encoding='utf-8') as f:
+def compress_file(input_filename: str, mode='r', encoding='utf-8'):
+    bytes_mode = is_binary_file(input_filename)
+    file = File(input_filename)
+    if bytes_mode:
+        mode = 'rb'
+        encoding = None
+    with open(file.full_file_name, mode, encoding=encoding) as f:
         data = f.read()  # Читаем как текст
-    encoded = encode(data)
-    if output_filename is None:
-        output_filename = input_filename
-    save_to_file(encoded, output_filename)
+    encoded = __encode(data)
+    __save_to_file(encoded, file.file_name_with_other_ext('lz77'), bytes_mode)
 
 
-def decompress_file(input_filename, output_filename):
-    encoded = load_from_file(input_filename)
-    lz77 = LZ77()
-    decoded = lz77.decode(encoded)
-    with open(output_filename, 'w', encoding='utf-8') as f:
+def decompress_file(input_filename: str, mode='w', encoding='utf-8'):
+    bytes_mode = is_binary_file(input_filename)
+    file = File(input_filename)
+    if bytes_mode:
+        mode = 'wb'
+        encoding = None
+    encoded = __load_from_file(file.full_file_name, bytes_mode)
+    decoded = __decode(encoded)
+    with open(file.get_decoded_file_name(), mode, encoding=encoding) as f:
         f.write(decoded)
 
 
